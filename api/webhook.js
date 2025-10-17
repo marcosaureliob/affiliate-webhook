@@ -7,18 +7,33 @@ module.exports = async (req, res) => {
 
   if (req.method !== "POST") return res.status(405).send("Method not allowed");
 
-  const { SHOPIFY_WEBHOOK_SECRET, SHOPIFY_STORE, SHOPIFY_ADMIN_TOKEN } =
-    process.env;
+  const buffers = [];
+  for await (const chunk of req) buffers.push(chunk);
+  const rawBody = Buffer.concat(buffers).toString("utf8");
 
-  const hmac = req.headers["x-shopify-hmac-sha256"] || "";
+  let body;
+  try {
+    body = JSON.parse(rawBody || "{}");
+  } catch {
+    body = {};
+  }
+
+  const SHOPIFY_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
+  const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
+  const SHOPIFY_ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
+
+  const hmacHeader = req.headers["x-shopify-hmac-sha256"] || "";
   const hash = crypto
-    .createHmac("sha256", SHOPIFY_WEBHOOK_SECRET)
-    .update(JSON.stringify(req.body))
+    .createHmac("sha256", SHOPIFY_SECRET)
+    .update(rawBody)
     .digest("base64");
 
-  if (hash !== hmac) return res.status(401).send("invalid");
+  if (hash !== hmacHeader) {
+    console.log("HMAC inválido.");
+    return res.status(401).send("invalid");
+  }
 
-  console.log("✅ Pedido recebido:", req.body.name || "sem nome");
+  console.log("✅ Pedido recebido:", body.id || "sem id");
 
-  return res.status(200).send("ok");
+  res.status(200).send("ok");
 };

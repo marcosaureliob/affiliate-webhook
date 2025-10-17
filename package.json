@@ -1,0 +1,8 @@
+{
+  "name": "affiliate-webhook",
+  "version": "1.0.0",
+  "main": "api/webhook.js",
+  "dependencies": {
+    "node-fetch": "^2.6.9"
+  }
+}
